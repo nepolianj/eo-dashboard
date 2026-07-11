@@ -1,0 +1,118 @@
+// Program Operations Dashboard - Educational Outreach, IIT Bombay
+// Entities follow the "Minimum Suggested Entities" table in the assignment,
+// with the optional normalised `payments` table included.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PROGRAM_MANAGER
+  OPERATIONS
+}
+
+enum ProgramMode {
+  ONLINE
+  OFFLINE
+  HYBRID
+}
+
+enum ProgramStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+}
+
+enum PaymentTxnStatus {
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String // bcrypt hash - never returned by any API
+  role      Role      @default(OPERATIONS)
+  is_active Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  programs  Program[] @relation("ProgramCreatedBy")
+
+  @@map("users")
+}
+
+model Program {
+  id            Int            @id @default(autoincrement())
+  name          String
+  code          String         @unique
+  mode          ProgramMode    @default(ONLINE)
+  start_date    DateTime       @db.Date
+  end_date      DateTime       @db.Date
+  fee           Decimal        @db.Decimal(10, 2)
+  coordinator   String
+  status        ProgramStatus  @default(DRAFT)
+  created_by    Int
+  createdBy     User           @relation("ProgramCreatedBy", fields: [created_by], references: [id])
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  registrations Registration[]
+
+  @@index([status])
+  @@index([start_date])
+  @@map("programs")
+}
+
+model Registration {
+  id                  Int                @id @default(autoincrement())
+  program_id          Int
+  program             Program            @relation(fields: [program_id], references: [id])
+  learner_name        String
+  learner_email       String
+  phone               String
+  registration_status RegistrationStatus @default(PENDING)
+  payment_status      PaymentStatus      @default(PENDING)
+  amount              Decimal            @db.Decimal(10, 2)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+  payments            Payment[]
+
+  @@index([program_id])
+  @@index([registration_status])
+  @@index([payment_status])
+  @@map("registrations")
+}
+
+model Payment {
+  id              Int              @id @default(autoincrement())
+  registration_id Int
+  registration    Registration     @relation(fields: [registration_id], references: [id], onDelete: Cascade)
+  amount          Decimal          @db.Decimal(10, 2)
+  reference_no    String           @unique
+  paid_on         DateTime
+  status          PaymentTxnStatus @default(SUCCESS)
+  created_at      DateTime         @default(now())
+
+  @@index([registration_id])
+  @@map("payments")
+}
