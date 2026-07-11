@@ -18,6 +18,11 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase().trim() },
+          include: {
+            role: {
+              include: { permissions: { include: { permission: true } } },
+            },
+          },
         });
 
         // Same failure path whether the user exists or not -> no user enumeration
@@ -30,7 +35,11 @@ export const authOptions: NextAuthOptions = {
           id: String(user.id),
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: user.role.name,
+          // Snapshot for UI gating only; the backend re-checks the DB on every request.
+          permissions: user.role.permissions.map(
+            (rp: { permission: { key: string } }) => rp.permission.key
+          ),
         };
       },
     }),
@@ -40,12 +49,14 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.permissions = user.permissions;
       }
       return token;
     },
     async session({ session, token }) {
       session.user.id = token.id;
       session.user.role = token.role;
+      session.user.permissions = token.permissions;
       return session;
     },
   },

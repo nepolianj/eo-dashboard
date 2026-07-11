@@ -58,18 +58,27 @@ npm run dev                          # http://localhost:3000
 | manager@eo.iitb.ac.in | PROGRAM_MANAGER |
 | ops@eo.iitb.ac.in | OPERATIONS |
 
-## Role-Based Access Control
+## Dynamic Roles & Permissions (Role Master / User Master)
 
-Authorization is enforced **in every API route handler** via a `requireRole()` guard (`src/lib/api.ts`) — the frontend only hides buttons for convenience and is never trusted.
+Access control is **database-driven**, not hardcoded: `roles` ⇄ `permissions` through a `role_permissions` pivot, and each user references a `role_id`. Every API route handler calls `requirePermission("<module>.<action>")` (`src/lib/api.ts`), which reads the user's role and permission set from the database **on every request** — so:
 
-| Action | ADMIN | PROGRAM_MANAGER | OPERATIONS |
+- Editing a role in **Role Master** changes what its users can do immediately (no re-login needed for the backend; the UI buttons refresh on next login since the JWT snapshot is only used to hide buttons).
+- Deactivating a user in **User Master** locks them out instantly, even with a valid session token.
+
+Seeded system roles (rename/delete blocked; permission sets editable):
+
+| Permission | Administrator | Program Manager | Operations |
 |---|---|---|---|
-| View dashboard / programs / registrations | ✅ | ✅ | ✅ |
-| Create / edit programs | ✅ | ✅ | ❌ |
-| Delete programs | ✅ | ❌ | ❌ |
-| Create / edit registrations | ✅ | ✅ | ✅ |
-| Delete registrations | ✅ | ✅ | ❌ |
-| Record payments | ✅ | ✅ | ✅ |
+| dashboard.view | ✅ | ✅ | ✅ |
+| programs.view | ✅ | ✅ | ✅ |
+| programs.create / edit | ✅ | ✅ | ❌ |
+| programs.delete | ✅ | ❌ | ❌ |
+| registrations.view / create / edit | ✅ | ✅ | ✅ |
+| registrations.delete | ✅ | ✅ | ❌ |
+| payments.record | ✅ | ✅ | ✅ |
+| users.manage / roles.manage | ✅ | ❌ | ❌ |
+
+Custom roles can be created in Role Master with any permission combination. Guardrails: you cannot deactivate your own account or change your own role; system roles can't be renamed or deleted; roles with assigned users can't be deleted.
 
 You can verify backend enforcement directly, e.g. logged in as `ops@…`:
 `curl -X DELETE http://localhost:3000/api/programs/1 -H "Cookie: <session>"` → `403 Forbidden`.
@@ -86,6 +95,9 @@ All endpoints return a consistent envelope: `{ success, data }` or `{ success: f
 | POST / PUT / DELETE | `/api/registrations`, `/api/registrations/:id` | Registration CRUD |
 | POST | `/api/payments` | Record a payment (derives payment status) |
 | GET | `/api/dashboard` | Aggregated metrics |
+| GET / POST | `/api/users`, PUT `/api/users/:id` | User Master (admin) |
+| GET / POST / PUT / DELETE | `/api/roles`, `/api/roles/:id` | Role Master (admin) |
+| GET | `/api/permissions` | Permission catalog for the role editor |
 
 ## Design Decisions
 
@@ -100,5 +112,4 @@ All endpoints return a consistent envelope: `{ success, data }` or `{ success: f
 
 - Pagination + column sorting on the tables (API is structured to accept `page`/`limit` easily)
 - Audit log table for create/update/delete actions
-- User management screen for Admin (users are currently seeded)
 - Unit tests for the payment-status derivation logic and RBAC guards

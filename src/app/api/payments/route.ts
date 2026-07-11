@@ -1,12 +1,12 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, requireRole, parseBody, ALL_ROLES } from "@/lib/api";
+import { ok, fail, requirePermission, parseBody } from "@/lib/api";
 import { paymentSchema } from "@/lib/validations";
 
 // POST /api/payments - record a payment and derive the registration's
 // payment_status on the backend (PENDING / PARTIAL / PAID).
 export async function POST(req: Request) {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("payments.record");
   if (error) return error;
 
   const { data, error: vErr } = await parseBody(req, paymentSchema);
@@ -66,4 +66,67 @@ export async function POST(req: Request) {
   });
 
   return ok(payment, 201);
+}
+
+// GET /api/payments - Payment Module: every payment initiated, with filters
+// and summary stats (how many initiated, amount collected, by status).
+export async function GET(req: Request) {
+  const { error } = await requirePermission("payments.view");
+  if (error) return error;
+
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get("status");
+  const q = searchParams.get("q");
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+
+  const where: Prisma.PaymentWhereInput = {};
+  if (status) where.status = status as never;
+  if (q) {
+    where.OR = [
+      { reference_no: { contains: q } },
+      { registration: { learner_name: { contains: q } } },
+      { registration: { learner_email: { contains: q } } },
+    ];
+  }
+  if (from || to) {
+    where.paid_on = {};
+    if (from) where.paid_on.gte = new Date(from);
+    if (to) {
+      const end = new Date(to);
+      end.setHours(23, 59, 59, 999);
+      where.paid_on.lte = end;
+    }
+  }
+
+  const [payments, totalInitiated, sumSuccess, byStatus] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      orderBy: { paid_on: "desc" },
+      include: {
+        registration: {
+          select: {
+            id: true,
+            learner_name: true,
+            learner_email: true,
+            program: { select: { id: true, name: true, code: true } },
+          },
+        },
+      },
+    }),
+    prisma.payment.count(),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "SUCCESS" } }),
+    prisma.payment.groupBy({ by: ["status"], _count: { _all: true }, _sum: { amount: true } }),
+  ]);
+
+  return ok({
+    payments,
+    summary: {
+      totalInitiated,
+      totalCollected: sumSuccess._sum.amount ?? 0,
+      byStatus: (byStatus as { status: string; _count: { _all: number }; _sum: { amount: unknown } }[]).map(
+        (s) => ({ status: s.status, count: s._count._all, amount: s._sum.amount ?? 0 })
+      ),
+    },
+  });
 }

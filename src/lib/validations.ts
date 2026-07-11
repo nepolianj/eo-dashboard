@@ -37,3 +37,30 @@ export const paymentSchema = z.object({
   reference_no: z.string().min(3).max(50),
   paid_on: z.coerce.date(),
 });
+
+export const userCreateSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(72),
+  role_id: z.coerce.number().int().positive(),
+  is_active: z.coerce.boolean().default(true),
+});
+
+export const userUpdateSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email("Enter a valid email"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72)
+    .optional()
+    .or(z.literal("")), // empty = keep current password
+  role_id: z.coerce.number().int().positive(),
+  is_active: z.coerce.boolean(),
+});
+
+export const roleSchema = z.object({
+  name: z.string().min(2).max(50),
+  description: z.string().max(200).optional().or(z.literal("")),
+  permission_ids: z.array(z.coerce.number().int().positive()).min(1, "Select at least one permission"),
+});

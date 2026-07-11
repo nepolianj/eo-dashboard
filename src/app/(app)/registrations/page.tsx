@@ -45,8 +45,11 @@ const fmtDate = (d: string) =>
 
 export default function RegistrationsPage() {
   const { data: session } = useSession();
-  const role = session?.user?.role;
-  const canDelete = role === "ADMIN" || role === "PROGRAM_MANAGER";
+  const can = (key: string) => session?.user?.permissions?.includes(key) ?? false;
+  const canCreate = can("registrations.create");
+  const canEdit = can("registrations.edit");
+  const canDelete = can("registrations.delete");
+  const canPay = can("payments.record");
 
   const [rows, setRows] = useState<Registration[]>([]);
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
@@ -207,12 +210,12 @@ export default function RegistrationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800">Registrations</h1>
           <p className="text-sm text-slate-500">Learner master — registrations and payment tracking</p>
         </div>
-        <PrimaryButton onClick={openCreate}>+ Register learner</PrimaryButton>
+        {canCreate && <PrimaryButton onClick={openCreate}>+ Register learner</PrimaryButton>}
       </div>
 
       {banner && (
@@ -227,8 +230,8 @@ export default function RegistrationsPage() {
       )}
 
       {/* Filters */}
-      <div className="grid grid-cols-2 gap-3 rounded-xl bg-white p-4 shadow-sm md:grid-cols-7">
-        <input className={`${inputCls} col-span-2 md:col-span-1`} placeholder="Search learner…"
+      <div className="grid grid-cols-2 gap-3 rounded-xl bg-white p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-7">
+        <input className={`${inputCls} col-span-2 sm:col-span-3 lg:col-span-1`} placeholder="Search learner…"
           value={q} onChange={(e) => setQ(e.target.value)} />
         <select className={inputCls} value={programFilter} onChange={(e) => setProgramFilter(e.target.value)}>
           <option value="">All programs</option>
@@ -290,12 +293,14 @@ export default function RegistrationsPage() {
                     {inr(paidSoFar(r))} / {inr(r.amount)}
                   </td>
                   <td className="px-5 py-3 text-right whitespace-nowrap">
-                    {r.payment_status !== "PAID" && r.registration_status !== "CANCELLED" && (
+                    {canPay && r.payment_status !== "PAID" && r.registration_status !== "CANCELLED" && (
                       <button onClick={() => openPayment(r)} className="mr-3 text-emerald-600 hover:underline">
                         Record payment
                       </button>
                     )}
-                    <button onClick={() => openEdit(r)} className="mr-3 text-brand-500 hover:underline">Edit</button>
+                    {canEdit && (
+                      <button onClick={() => openEdit(r)} className="mr-3 text-brand-500 hover:underline">Edit</button>
+                    )}
                     {canDelete && (
                       <button onClick={() => setDeleting(r)} className="text-rose-600 hover:underline">Delete</button>
                     )}

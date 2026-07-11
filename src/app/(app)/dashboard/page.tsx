@@ -41,7 +41,7 @@ export default function DashboardPage() {
   }
   if (!data) {
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-200" />
         ))}
@@ -63,11 +63,11 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-500">Operational overview across all programs</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {cards.map((c) => (
           <div key={c.label} className="rounded-xl bg-white p-5 shadow-sm">
             <div className="text-sm text-slate-500">{c.label}</div>
-            <div className="mt-2 text-3xl font-semibold text-brand-600">{c.value}</div>
+            <div className="mt-2 text-xl font-semibold text-brand-600 md:text-3xl">{c.value}</div>
           </div>
         ))}
       </div>

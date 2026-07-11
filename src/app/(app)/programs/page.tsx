@@ -37,9 +37,10 @@ const inr = (n: string) =>
 
 export default function ProgramsPage() {
   const { data: session } = useSession();
-  const role = session?.user?.role;
-  const canWrite = role === "ADMIN" || role === "PROGRAM_MANAGER";
-  const canDelete = role === "ADMIN";
+  const can = (key: string) => session?.user?.permissions?.includes(key) ?? false;
+  const canCreate = can("programs.create");
+  const canEdit = can("programs.edit");
+  const canDelete = can("programs.delete");
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,12 +145,12 @@ export default function ProgramsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800">Programs</h1>
           <p className="text-sm text-slate-500">Program master — create, edit and track programs</p>
         </div>
-        {canWrite && <PrimaryButton onClick={openCreate}>+ New program</PrimaryButton>}
+        {canCreate && <PrimaryButton onClick={openCreate}>+ New program</PrimaryButton>}
       </div>
 
       {banner && (
@@ -164,9 +165,9 @@ export default function ProgramsPage() {
       )}
 
       {/* Filters */}
-      <div className="grid grid-cols-2 gap-3 rounded-xl bg-white p-4 shadow-sm md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 rounded-xl bg-white p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-6">
         <input
-          className={inputCls}
+          className={`${inputCls} col-span-2 sm:col-span-3 lg:col-span-1`}
           placeholder="Search name, code, coordinator…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -205,7 +206,7 @@ export default function ProgramsPage() {
               <th className="px-5 py-3">Coordinator</th>
               <th className="px-5 py-3">Regs</th>
               <th className="px-5 py-3">Status</th>
-              {canWrite && <th className="px-5 py-3 text-right">Actions</th>}
+              {(canEdit || canDelete) && <th className="px-5 py-3 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -230,9 +231,11 @@ export default function ProgramsPage() {
                   <td className="px-5 py-3 text-slate-600">{p.coordinator}</td>
                   <td className="px-5 py-3 text-slate-600">{p._count?.registrations ?? 0}</td>
                   <td className="px-5 py-3"><Badge value={p.status} /></td>
-                  {canWrite && (
+                  {(canEdit || canDelete) && (
                     <td className="px-5 py-3 text-right">
-                      <button onClick={() => openEdit(p)} className="mr-3 text-brand-500 hover:underline">Edit</button>
+                      {canEdit && (
+                        <button onClick={() => openEdit(p)} className="mr-3 text-brand-500 hover:underline">Edit</button>
+                      )}
                       {canDelete && (
                         <button onClick={() => setDeleting(p)} className="text-rose-600 hover:underline">Delete</button>
                       )}

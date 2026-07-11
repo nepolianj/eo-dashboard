@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ok, fail, requireRole, parseBody, ALL_ROLES, MANAGERS } from "@/lib/api";
+import { ok, fail, requirePermission, parseBody } from "@/lib/api";
 import { registrationSchema } from "@/lib/validations";
 
 type Params = { params: { id: string } };
@@ -16,9 +16,9 @@ async function findRegistration(id: string) {
   });
 }
 
-// GET /api/registrations/:id (all roles)
+// GET /api/registrations/:id
 export async function GET(_req: Request, { params }: Params) {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("registrations.view");
   if (error) return error;
 
   const registration = await findRegistration(params.id);
@@ -26,9 +26,9 @@ export async function GET(_req: Request, { params }: Params) {
   return ok(registration);
 }
 
-// PUT /api/registrations/:id (all roles - ops staff update statuses)
+// PUT /api/registrations/:id
 export async function PUT(req: Request, { params }: Params) {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("registrations.edit");
   if (error) return error;
 
   const registration = await findRegistration(params.id);
@@ -64,9 +64,9 @@ export async function PUT(req: Request, { params }: Params) {
   return ok(updated);
 }
 
-// DELETE /api/registrations/:id (Admin, Program Manager)
+// DELETE /api/registrations/:id
 export async function DELETE(_req: Request, { params }: Params) {
-  const { error } = await requireRole(MANAGERS);
+  const { error } = await requirePermission("registrations.delete");
   if (error) return error;
 
   const registration = await findRegistration(params.id);

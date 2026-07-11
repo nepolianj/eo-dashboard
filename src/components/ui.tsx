@@ -42,7 +42,7 @@ export function Modal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4">
-      <div className="mt-10 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+      <div className="mt-4 w-full max-w-lg rounded-xl bg-white p-5 shadow-xl sm:mt-10 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
           <button

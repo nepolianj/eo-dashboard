@@ -11,12 +11,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  PROGRAM_MANAGER
-  OPERATIONS
-}
-
 enum ProgramMode {
   ONLINE
   OFFLINE
@@ -49,16 +43,50 @@ enum PaymentTxnStatus {
   REFUNDED
 }
 
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  is_system   Boolean          @default(false) // seeded roles: rename/delete blocked
+  users       User[]
+  permissions RolePermission[]
+  created_at  DateTime         @default(now())
+
+  @@map("roles")
+}
+
+model Permission {
+  id     Int              @id @default(autoincrement())
+  key    String           @unique // e.g. "programs.delete"
+  label  String
+  module String // grouping for the UI matrix
+  roles  RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role_id       Int
+  permission_id Int
+  role          Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@map("role_permissions")
+}
+
 model User {
   id        Int       @id @default(autoincrement())
   name      String
   email     String    @unique
   password  String // bcrypt hash - never returned by any API
-  role      Role      @default(OPERATIONS)
+  role_id   Int
+  role      Role      @relation(fields: [role_id], references: [id])
   is_active Boolean   @default(true)
   createdAt DateTime  @default(now()) @map("created_at")
   programs  Program[] @relation("ProgramCreatedBy")
 
+  @@index([role_id])
   @@map("users")
 }
 

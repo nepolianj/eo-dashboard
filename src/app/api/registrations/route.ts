@@ -1,11 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, requireRole, parseBody, ALL_ROLES } from "@/lib/api";
+import { ok, fail, requirePermission, parseBody } from "@/lib/api";
 import { registrationSchema } from "@/lib/validations";
 
 // GET /api/registrations - list with filtering & search (all roles)
 export async function GET(req: Request) {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("registrations.view");
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
@@ -49,9 +49,9 @@ export async function GET(req: Request) {
   return ok(registrations);
 }
 
-// POST /api/registrations - create (all roles can register learners)
+// POST /api/registrations - create
 export async function POST(req: Request) {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("registrations.create");
   if (error) return error;
 
   const { data, error: vErr } = await parseBody(req, registrationSchema);

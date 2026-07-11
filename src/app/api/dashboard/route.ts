@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { ok, requireRole, ALL_ROLES } from "@/lib/api";
+import { ok, requirePermission } from "@/lib/api";
 
 // GET /api/dashboard - aggregated operational metrics (all roles)
 export async function GET() {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("dashboard.view");
   if (error) return error;
 
   const now = new Date();

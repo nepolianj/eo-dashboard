@@ -1,11 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, requireRole, parseBody, ALL_ROLES, MANAGERS } from "@/lib/api";
+import { ok, fail, requirePermission, parseBody } from "@/lib/api";
 import { programSchema } from "@/lib/validations";
 
 // GET /api/programs - list with filtering & search (all roles)
 export async function GET(req: Request) {
-  const { error } = await requireRole(ALL_ROLES);
+  const { error } = await requirePermission("programs.view");
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 
 // POST /api/programs - create (Admin, Program Manager)
 export async function POST(req: Request) {
-  const { session, error } = await requireRole(MANAGERS);
+  const { user, error } = await requirePermission("programs.create");
   if (error) return error;
 
   const { data, error: vErr } = await parseBody(req, programSchema);
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   if (exists) return fail("A program with this code already exists.", 409);
 
   const program = await prisma.program.create({
-    data: { ...data!, created_by: Number(session!.user.id) },
+    data: { ...data!, created_by: user!.id },
   });
 
   return ok(program, 201);
